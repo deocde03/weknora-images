@@ -4,15 +4,32 @@ on:
 
 env:
   REG: crpi-hui3esaavbva0p7t.cn-shanghai.personal.cr.aliyuncs.com
+  VER: v0.9.0          # 注意带 v，Docker Hub 上实际 tag 就是 v0.9.0
 
 jobs:
   relay:
     runs-on: ubuntu-latest
     steps:
-      - name: Discover available tags
+      - name: Login to ACR
+        run: echo "${{ secrets.ACR_PASS }}" | docker login "$REG" -u "${{ secrets.ACR_USER }}" --password-stdin
+
+      - name: Relay WeKnora images
         run: |
+          set -e
+          NS="${{ secrets.ACR_NS }}"
           for r in weknora-app weknora-ui weknora-docreader; do
-            echo "========== $r =========="
-            curl -fsSL "https://hub.docker.com/v2/repositories/wechatopenai/$r/tags?page_size=50&ordering=last_updated" \
-              | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -25
+            echo "::group::$r:$VER"
+            docker pull "wechatopenai/$r:$VER"
+            docker tag  "wechatopenai/$r:$VER" "$REG/$NS/$r:$VER"
+            docker push "$REG/$NS/$r:$VER"
+            echo "::endgroup::"
           done
+
+      - name: Summary
+        run: |
+          {
+            echo "### 中转完成"
+            for r in weknora-app weknora-ui weknora-docreader; do
+              echo "- \`$REG/${{ secrets.ACR_NS }}/$r:$VER\`"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
