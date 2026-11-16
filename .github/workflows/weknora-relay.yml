@@ -9,26 +9,10 @@ jobs:
   relay:
     runs-on: ubuntu-latest
     steps:
-      - name: Login to ACR
-        run: echo "${{ secrets.ACR_PASS }}" | docker login "$REG" -u "${{ secrets.ACR_USER }}" --password-stdin
-
-      - name: Relay WeKnora images
+      - name: Discover available tags
         run: |
-          set -e
-          NS="${{ secrets.ACR_NS }}"
-          for img in weknora-app:0.9.0 weknora-ui:0.9.0 weknora-docreader:0.9.0; do
-            echo "::group::$img"
-            docker pull "wechatopenai/$img"
-            docker tag  "wechatopenai/$img" "$REG/$NS/${img%%:*}:v0.9.0"
-            docker push "$REG/$NS/${img%%:*}:v0.9.0"
-            echo "::endgroup::"
+          for r in weknora-app weknora-ui weknora-docreader; do
+            echo "========== $r =========="
+            curl -fsSL "https://hub.docker.com/v2/repositories/wechatopenai/$r/tags?page_size=50&ordering=last_updated" \
+              | grep -o '"name":"[^"]*"' | cut -d'"' -f4 | head -25
           done
-
-      - name: Summary
-        run: |
-          {
-            echo "已中转完成，国内拉取用："
-            for n in weknora-app weknora-ui weknora-docreader; do
-              echo "docker pull $REG/${{ secrets.ACR_NS }}/$n:v0.9.0"
-            done
-          } >> "$GITHUB_STEP_SUMMARY"
