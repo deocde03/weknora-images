@@ -2,18 +2,20 @@ name: weknora-relay
 on:
   workflow_dispatch:
 
+env:
+  REG: crpi-hui3esaavbva0p7t.cn-shanghai.personal.cr.aliyuncs.com
+
 jobs:
   relay:
     runs-on: ubuntu-latest
     steps:
       - name: Login to ACR
-        run: echo "${{ secrets.ACR_PASS }}" | docker login registry.cn-shanghai.aliyuncs.com -u "${{ secrets.ACR_USER }}" --password-stdin
+        run: echo "${{ secrets.ACR_PASS }}" | docker login "$REG" -u "${{ secrets.ACR_USER }}" --password-stdin
 
       - name: Relay WeKnora images
         run: |
           set -e
-          NS=${{ secrets.ACR_NS }}
-          REG=registry.cn-shanghai.aliyuncs.com
+          NS="${{ secrets.ACR_NS }}"
           for img in weknora-app:0.9.0 weknora-ui:0.9.0 weknora-docreader:0.9.0; do
             echo "::group::$img"
             docker pull "wechatopenai/$img"
@@ -27,6 +29,6 @@ jobs:
           {
             echo "已中转完成，国内拉取用："
             for n in weknora-app weknora-ui weknora-docreader; do
-              echo "docker pull registry.cn-shanghai.aliyuncs.com/${{ secrets.ACR_NS }}/$n:v0.9.0"
+              echo "docker pull $REG/${{ secrets.ACR_NS }}/$n:v0.9.0"
             done
           } >> "$GITHUB_STEP_SUMMARY"
